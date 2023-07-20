@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 # Runs whoami command under the user passed as an argument
-sudo -u "$1" whoami # -c "whoami" 
+user="$1"
+
+if [ "$user" ] ; then
+    chsh -s "$(which bash)" "$user" && su "$user" -c "whoami"
+fi 
