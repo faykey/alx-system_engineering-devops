@@ -1,4 +1,6 @@
-s is a Module for count_words function
+#!/usr/bin/python3
+"""
+This is a Module for count_words function
 """
 import requests
 from collections import Counter
