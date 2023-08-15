@@ -1,44 +1,54 @@
-#!/usr/bin/python3
-"""Queries the Reddit API and
-returns a list containing the
-titles of all hot articles for
-a given subreddit.
-
-If no results are found for the
-given subreddit, the function
-should return Invalid.
+s is a Module for count_words function
 """
 import requests
+from collections import Counter
 
 
-def count_words(subreddit, word_list, count_dict=None, after=None):
-    if count_dict is None:
-        count_dict = {}
+def count_words(subreddit, word_list, new_after='', words_dict=None):
+    """
+    Queries the Reddit API, then parses the title
+    of all hot articles, and prints a
+    sorted count of given keywords.
+    """
 
-    reddit = requests.Reddit(client_id='your_client_id_here',
-                         client_secret='your_client_secret_here',
-                         user_agent='your_user_agent_here')
-    
+    if words_dict is None:
+        words_dict = Counter()
+
+    res = requests.get("https://www.reddit.com/r/{}/hot.json"
+                       .format(subreddit),
+                       headers={'User-Agent': 'Custom'},
+                       params={'after': new_after},
+                       allow_redirects=False)
+
+    if res.status_code != 200:
+        return
+
     try:
-        sub = reddit.subreddit(subreddit)
-        hot_posts = sub.hot(limit=100, params={'after': after})
+        response = res.json().get('data', None)
+        if response is None:
+            return
+    except ValueError:
+        return
 
-        for post in hot_posts:
-            title = post.title.lower()
-            for word in word_list:
-                if word.lower() in title:
-                    if word in count_dict:
-                        count_dict[word] += 1
-                    elif word.lower() in count_dict:
-                        count_dict[word.lower()] += 1
-                    else:
-                        count_dict[word] = 1
+    children = response.get('children', [])
 
-        if hot_posts:
-            count_words(subreddit, word_list, count_dict, after=hot_posts[-1].name)
-        else:
-            sorted_words = sorted(count_dict.items(), key=lambda x: x[0].lower())
-            for word, count in sorted_words:
-                print(f'{word}: {count}')
-    except:
-        print('Invalid subreddit.')
+    for post in children:
+        title = post.get('data', {}).get('title', '')
+        for key_word in word_list:
+            for word in title.lower().split():
+                if key_word == word:
+                    words_dict[key_word] += 1
+
+    new_after = response.get('after', None)
+
+    if new_after is None:
+        sorted_dict = sorted(words_dict.items(),
+                             key=lambda x: x[1],
+                             reverse=True)
+
+        for word, count in sorted_dict:
+            if count != 0:
+                print("{}: {}".format(word, count))
+        return
+
+    return count_words(subreddit, word_list, new_after, words_dict)
